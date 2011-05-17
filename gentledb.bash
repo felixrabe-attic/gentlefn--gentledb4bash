@@ -29,8 +29,9 @@ fi
 
 _gentledb_available_dbclasses=( $(python -c "import string, gentledb; print ' '.join(filter(lambda s: s.startswith(tuple(string.uppercase)), dir(gentledb)))") )
 
-_gentledb_py_header="$(cat <<'EOT'
-import shutil, sys, gentledb
+read -d '' _gentledb_py_header <<"EOT" || true
+import errno, shutil, sys
+import gentledb
 DBClass = getattr(gentledb, sys.argv[1])
 db_options = sys.argv[2]
 if db_options == "-":
@@ -39,10 +40,17 @@ elif db_options == "None":
     db_options = [None]
 else:
     db_options = [db_options]
-db = DBClass(*db_options)
+db = gentledb.Easy(DBClass(*db_options))
+try:
+    $pycmd
+except IOError as (exc_errno, strerror):
+    if exc_errno == errno.EPIPE:
+        pass
+    else:
+        raise
 EOT
-)"
-function _py {  # expects one argument or $pycmd, and $db_varname
+
+function _gentledb_py {  # expects one argument or $pycmd, and $db_varname
     if [[ "${1--}" != "-" ]] ; then
         local pycmd="$1"
     fi
@@ -51,7 +59,8 @@ function _py {  # expects one argument or $pycmd, and $db_varname
     local db_class="${!db_varname%% *}"
     local db_options="${!db_varname#* }"
     $do_debug && args python -c "$_gentledb_py_header; $pycmd" "$db_class" "$db_options" "$@" > /dev/stderr
-    python -c "$_gentledb_py_header; $pycmd" "$db_class" "$db_options" "$@"
+    pycmd="${_gentledb_py_header/\$pycmd/$pycmd}"
+    python -c "$pycmd" "$db_class" "$db_options" "$@"
 }
 
 function args {
@@ -106,11 +115,13 @@ function gentledb {
 
     ## GET DIRECTORY
 
+    pycmd="print db.directory"
+
     # gentledb db getdir
     if [[ $# -eq 2 && "$2" = "getdir" ]] ; then
         local db_varname="$1"
 
-        _py "print db.directory"
+        _gentledb_py
         return 0
     fi
 
@@ -120,16 +131,18 @@ function gentledb {
         local dir_varname="$1"
         local db_varname="$3"
 
-        export $dir_varname="$(_py "print db.directory")"
+        export $dir_varname="$(_gentledb_py)"
         return 0
     fi
 
 
     ## GET RANDOM ID
 
+    pycmd="from gentledb.utilities import random; print random()"
+
     # gentledb random
     if [[ $# -eq 1 && "$1" = "random" ]] ; then
-        python -c "from gentledb.utilities import random; print random()"
+        python -c "$pycmd"
         return 0
     fi
 
@@ -138,7 +151,7 @@ function gentledb {
         _gentledb_test_subshell || return 1
         local pid_varname="$1"
 
-        export $pid_varname="$(python -c "from gentledb.utilities import random; print random()")"
+        export $pid_varname="$(python -c "$pycmd")"
         return 0
     fi
 
@@ -151,7 +164,7 @@ function gentledb {
     if [[ $# -eq 2 && "$2" = "+" ]] ; then
         local db_varname="$1"
 
-        _py
+        _gentledb_py
         return 0
     fi
 
@@ -161,7 +174,7 @@ function gentledb {
         local cid_varname="$1"
         local db_varname="$3"
 
-        export $cid_varname="$(_py)"
+        export $cid_varname="$(_gentledb_py)"
         return 0
     fi
 
@@ -172,7 +185,7 @@ function gentledb {
         local db_varname="$1"
         local ct="$3"
 
-        _py - "$ct"
+        _gentledb_py - "$ct"
         return 0
     fi
 
@@ -183,7 +196,7 @@ function gentledb {
         local db_varname="$3"
         local ct="$5"
 
-        export $cid_varname="$(_py - "$ct")"
+        export $cid_varname="$(_gentledb_py - "$ct")"
         return 0
     fi
 
@@ -197,7 +210,7 @@ function gentledb {
         local db_varname="$1"
         local content_id="${!3-$3}"
 
-        _py - "$content_id"
+        _gentledb_py - "$content_id"
         return 0
     fi
 
@@ -208,7 +221,7 @@ function gentledb {
         local db_varname="$3"
         local content_id="${!5-$5}"
 
-        export $ct_varname="$(_py - "$content_id"; echo x)"
+        export $ct_varname="$(_gentledb_py - "$content_id"; echo x)"
         eval "$ct_varname=\"\${$ct_varname%x}\""
         return 0
     fi
@@ -222,7 +235,7 @@ function gentledb {
         local pointer_id="${!2-$2}"
         local content_id="${!4-$4}"
 
-        _py "db[sys.argv[3]] = sys.argv[4]" "$pointer_id" "$content_id"
+        _gentledb_py "db[sys.argv[3]] = sys.argv[4]" "$pointer_id" "$content_id"
         return 0
     fi
 
@@ -236,7 +249,7 @@ function gentledb {
         local db_varname="$3"
         local pointer_id="${!4-$4}"
 
-        export $cid_varname="$(_py "print db[sys.argv[3]]" "$pointer_id")"
+        export $cid_varname="$(_gentledb_py "print db[sys.argv[3]]" "$pointer_id")"
         return 0
     fi
 
@@ -245,7 +258,52 @@ function gentledb {
         local db_varname="$1"
         local pointer_id="${!2-$2}"
 
-        _py "print db[sys.argv[3]]" "$pointer_id"
+        _gentledb_py "print db[sys.argv[3]]" "$pointer_id"
+        return 0
+    fi
+
+
+    ## FINDC AND FINDP
+
+    pycmd="print '\n'.join(db.findc(sys.argv[3]))"
+
+    # gentledb db findc partial_content_id
+    if [[ $# -eq 3 && "$2" = "findc" ]] ; then
+        local db_varname="$1"
+        local content_id="$3"
+
+        _gentledb_py - "$content_id"
+        return 0
+    fi
+
+    # gentledb content_id_list = db findc partial_content_id
+    if [[ $# -eq 5 && "$2" = "=" && "$4" = "findc" ]] ; then
+        local cid_varname="$1"
+        local db_varname="$3"
+        local content_id="$5"
+
+        export $cid_varname="$(_gentledb_py - "$content_id")"
+        return 0
+    fi
+
+    pycmd="print '\n'.join(db.findp(sys.argv[3]))"
+
+    # gentledb db findp partial_pointer_id
+    if [[ $# -eq 3 && "$2" = "findp" ]] ; then
+        local db_varname="$1"
+        local pointer_id="$3"
+
+        _gentledb_py - "$pointer_id"
+        return 0
+    fi
+
+    # gentledb pointer_id_list = db findp partial_pointer_id
+    if [[ $# -eq 5 && "$2" = "=" && "$4" = "findp" ]] ; then
+        local pid_varname="$1"
+        local db_varname="$3"
+        local pointer_id="$5"
+
+        export $pid_varname="$(_gentledb_py - "$pointer_id")"
         return 0
     fi
 
