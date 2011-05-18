@@ -227,6 +227,18 @@ function gentledb {
     fi
 
 
+    ## SET POINTER ID TO EMPTY CONTENT
+
+    # gentledb db pid = empty
+    if [[ $# -eq 4 && "$3" = "=" && "$4" = "empty" ]] ; then
+        local db_varname="$1"
+        local pointer_id="${!2-$2}"
+
+        _gentledb_py "db[sys.argv[3]] = db + ''" "$pointer_id"
+        return 0
+    fi
+
+
     ## SET POINTER ID TO CONTENT ID
 
     # gentledb db pointer_id = content_id
@@ -242,6 +254,8 @@ function gentledb {
 
     ## GET CONTENT ID FROM POINTER ID
 
+    pycmd="print db[sys.argv[3]]"
+
     # gentledb content_id = db pointer_id
     if [[ $# -eq 4 && "$2" = "=" ]] ; then
         _gentledb_test_subshell || return 1
@@ -249,7 +263,7 @@ function gentledb {
         local db_varname="$3"
         local pointer_id="${!4-$4}"
 
-        export $cid_varname="$(_gentledb_py "print db[sys.argv[3]]" "$pointer_id")"
+        export $cid_varname="$(_gentledb_py - "$pointer_id")"
         return 0
     fi
 
@@ -258,7 +272,7 @@ function gentledb {
         local db_varname="$1"
         local pointer_id="${!2-$2}"
 
-        _gentledb_py "print db[sys.argv[3]]" "$pointer_id"
+        _gentledb_py - "$pointer_id"
         return 0
     fi
 
@@ -304,6 +318,44 @@ function gentledb {
         local pointer_id="$5"
 
         export $pid_varname="$(_gentledb_py - "$pointer_id")"
+        return 0
+    fi
+
+
+    ## EDIT
+
+    # gentledb db edit pointer_id
+    if [[ $# -eq 3 && "$2" = "edit" ]] ; then
+        local db_varname="$1"
+        local pointer_id="${!3-$3}"
+
+        local fn="$(mktemp -t gentle_tp_da92_tmpfile_XXXXXXXX)"
+        ( set +e ; (
+            set -e  # cheap trap: inner block exits on failure, but outer block will be safe
+
+            pycmd="shutil.copyfileobj(db(db[sys.argv[3]]), sys.stdout)"
+            _gentledb_py - "$pointer_id" >| "$fn"
+
+            "${EDITOR-vi}" "$fn"
+
+            pycmd="f = db(); shutil.copyfileobj(sys.stdin, f); db[sys.argv[3]] = f()"
+            _gentledb_py - "$pointer_id" < "$fn"
+        ) ; true )
+        rm -f "$fn"
+
+        return 0
+    fi
+
+
+    ## CAT
+
+    # gentledb db cat pointer_id
+    if [[ $# -eq 3 && "$2" = "cat" ]] ; then
+        local db_varname="$1"
+        local pointer_id="${!3-$3}"
+
+        pycmd="shutil.copyfileobj(db(db[sys.argv[3]]), sys.stdout)"
+        _gentledb_py - "$pointer_id"
         return 0
     fi
 
