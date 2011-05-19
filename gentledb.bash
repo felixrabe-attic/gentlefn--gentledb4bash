@@ -47,7 +47,11 @@ except IOError as (exc_errno, strerror):
     if exc_errno == errno.EPIPE:
         pass
     else:
-        raise
+        print >>sys.stderr, "ERROR:", strerror
+        sys.exit(1)
+except Exception as e:
+    print >>sys.stderr, "ERROR:", e
+    sys.exit(1)
 EOT
 
 function _gentledb_py {  # expects one argument or $pycmd, and $db_varname
