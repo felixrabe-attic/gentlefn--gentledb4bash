@@ -359,6 +359,71 @@ function gentledb {
         return 0
     fi
 
+
+    ## EDITJSON
+
+    # Pretty-prints JSON before editing, and compacts after.
+
+    local pycmd_pprint="if True:
+        import json
+        j = db - db[sys.argv[3]]
+        try:
+            j = json.loads(j)
+        except:
+            sys.stdout.write(j)
+        else:
+            # pretty-print
+            json.dump(j, sys.stdout, sort_keys=True, indent=4)
+            sys.stdout.write('\n')"
+
+    pycmd="f = db(); shutil.copyfileobj(sys.stdin, f); db[sys.argv[3]] = f()"
+
+    local pycmd_compact="if True:
+        import json
+        j = sys.stdin.read()
+        f = db()
+        try:
+            j = json.loads(j)
+        except:
+            f.write(j)
+        else:
+            # compact
+            json.dump(j, f, sort_keys=True, separators=(',',':'))
+        db[sys.argv[3]] = f()"
+
+    # gentledb db editjson pointer_id
+    if [[ $# -eq 3 && "$2" = "editjson" ]] ; then
+        local db_varname="$1"
+        local pointer_id="${!3-$3}"
+
+        local fn="$(mktemp -t gentle_tp_da92_tmpfile_XXXXXXXX)"
+        ( set +e ; (
+            set -e  # cheap trap: inner block exits on failure, but outer block will be safe
+
+            _gentledb_py "$pycmd_pprint" "$pointer_id" >| "$fn"
+            "${EDITOR-vi}" "$fn"
+            _gentledb_py "$pycmd_compact" "$pointer_id" < "$fn"
+        ) ; true )
+        rm -f "$fn"
+
+        return 0
+    fi
+
+
+    ## CATJSON
+
+    # Pretty-prints JSON.
+
+    # gentledb db catjson pointer_id
+    if [[ $# -eq 3 && "$2" = "catjson" ]] ; then
+        local db_varname="$1"
+        local pointer_id="${!3-$3}"
+
+        _gentledb_py "$pycmd_pprint" "$pointer_id"
+        return 0
+    fi
+
+
     echo NOT IMPLEMENTED > /dev/stderr
     return 1
 }
