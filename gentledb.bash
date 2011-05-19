@@ -62,8 +62,8 @@ function _gentledb_py {  # expects one argument or $pycmd, and $db_varname
 
     local db_class="${!db_varname%% *}"
     local db_options="${!db_varname#* }"
-    $do_debug && args python -c "$_gentledb_py_header; $pycmd" "$db_class" "$db_options" "$@" > /dev/stderr
     pycmd="${_gentledb_py_header/\$pycmd/$pycmd}"
+    $do_debug && args python -c "$$pycmd" "$db_class" "$db_options" "$@" > /dev/stderr
     python -c "$pycmd" "$db_class" "$db_options" "$@"
 }
 
