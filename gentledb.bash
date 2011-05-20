@@ -376,8 +376,7 @@ function gentledb {
         except:
             sys.stdout.write(j)
         else:
-            # pretty-print
-            json.dump(j, sys.stdout, sort_keys=True, indent=4)
+            json.pretty(json.dump, j, sys.stdout)
             sys.stdout.write('\n')"
 
     pycmd="f = db(); shutil.copyfileobj(sys.stdin, f); db[sys.argv[3]] = f()"
@@ -391,8 +390,7 @@ function gentledb {
         except:
             f.write(j)
         else:
-            # compact
-            json.dump(j, f, sort_keys=True, separators=(',',':'))
+            json.compact(json.dump, j, f)
         db[sys.argv[3]] = f()"
 
     # gentledb db editjson pointer_id
