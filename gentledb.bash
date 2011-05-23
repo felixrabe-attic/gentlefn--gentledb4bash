@@ -83,6 +83,17 @@ function _gentledb_test_subshell {
 }
 
 
+function _gentledb_var_or_val {
+    local v="$1"
+    # Bash turns 'v=000 ; echo ${!v-$v}' into the value of $0, but we want '000':
+    if [[ "$v" == 0* ]] ; then
+        echo "$v"
+    else
+        echo "${!v-$v}"
+    fi
+}
+
+
 function gentledb {
     local do_debug=false
     if [[ $# -ge 1 && "$1" = "-d" ]] ; then
@@ -212,7 +223,7 @@ function gentledb {
     # gentledb db - content_id > some-content
     if [[ $# -eq 3 && "$2" = "-" ]] ; then
         local db_varname="$1"
-        local content_id="${!3-$3}"
+        local content_id="$(_gentledb_var_or_val "$3")"
 
         _gentledb_py - "$content_id"
         return 0
@@ -223,7 +234,7 @@ function gentledb {
         _gentledb_test_subshell || return 1
         local ct_varname="$1"
         local db_varname="$3"
-        local content_id="${!5-$5}"
+        local content_id="$(_gentledb_var_or_val "$5")"
 
         export $ct_varname="$(_gentledb_py - "$content_id"; echo x)"
         eval "$ct_varname=\"\${$ct_varname%x}\""
@@ -236,7 +247,7 @@ function gentledb {
     # gentledb db pid = empty
     if [[ $# -eq 4 && "$3" = "=" && "$4" = "empty" ]] ; then
         local db_varname="$1"
-        local pointer_id="${!2-$2}"
+        local pointer_id="$(_gentledb_var_or_val "$2")"
 
         _gentledb_py "db[sys.argv[3]] = db + ''" "$pointer_id"
         return 0
@@ -248,8 +259,8 @@ function gentledb {
     # gentledb db pointer_id = content_id
     if [[ $# -eq 4 && "$3" = "=" ]] ; then
         local db_varname="$1"
-        local pointer_id="${!2-$2}"
-        local content_id="${!4-$4}"
+        local pointer_id="$(_gentledb_var_or_val "$2")"
+        local content_id="$(_gentledb_var_or_val "$4")"
 
         _gentledb_py "db[sys.argv[3]] = sys.argv[4]" "$pointer_id" "$content_id"
         return 0
@@ -265,7 +276,7 @@ function gentledb {
         _gentledb_test_subshell || return 1
         local cid_varname="$1"
         local db_varname="$3"
-        local pointer_id="${!4-$4}"
+        local pointer_id="$(_gentledb_var_or_val "$4")"
 
         export $cid_varname="$(_gentledb_py - "$pointer_id")"
         return 0
@@ -274,7 +285,7 @@ function gentledb {
     # gentledb db pointer_id > content-id-file
     if [[ $# -eq 2 ]] ; then
         local db_varname="$1"
-        local pointer_id="${!2-$2}"
+        local pointer_id="$(_gentledb_var_or_val "$2")"
 
         _gentledb_py - "$pointer_id"
         return 0
@@ -331,7 +342,7 @@ function gentledb {
     # gentledb db edit pointer_id
     if [[ $# -eq 3 && "$2" = "edit" ]] ; then
         local db_varname="$1"
-        local pointer_id="${!3-$3}"
+        local pointer_id="$(_gentledb_var_or_val "$3")"
 
         local fn="$(mktemp -t gentle_tp_da92_tmpfile_XXXXXXXX)"
         ( set +e ; (
@@ -356,7 +367,7 @@ function gentledb {
     # gentledb db cat pointer_id
     if [[ $# -eq 3 && "$2" = "cat" ]] ; then
         local db_varname="$1"
-        local pointer_id="${!3-$3}"
+        local pointer_id="$(_gentledb_var_or_val "$3")"
 
         pycmd="shutil.copyfileobj(db(db[sys.argv[3]]), sys.stdout)"
         _gentledb_py - "$pointer_id"
@@ -396,7 +407,7 @@ function gentledb {
     # gentledb db editjson pointer_id
     if [[ $# -eq 3 && "$2" = "editjson" ]] ; then
         local db_varname="$1"
-        local pointer_id="${!3-$3}"
+        local pointer_id="$(_gentledb_var_or_val "$3")"
 
         local fn="$(mktemp -t gentle_tp_da92_tmpfile_XXXXXXXX)"
         ( set +e ; (
@@ -419,7 +430,7 @@ function gentledb {
     # gentledb db catjson pointer_id
     if [[ $# -eq 3 && "$2" = "catjson" ]] ; then
         local db_varname="$1"
-        local pointer_id="${!3-$3}"
+        local pointer_id="$(_gentledb_var_or_val "$3")"
 
         _gentledb_py "$pycmd_pprint" "$pointer_id"
         return 0
