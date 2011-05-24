@@ -73,12 +73,12 @@ function _gentledb_test_subshell {
 
 
 function _gentledb_var_or_val {
-    local v=$1
+    local _varname=$1
     # Bash turns 'v=000 ; echo ${!v-$v}' into the value of $0, but we want '000':
-    if [[ $v == 0* ]] ; then
-        echo "$v"
+    if [[ $_varname == 0* ]] ; then
+        echo "$_varname"
     else
-        echo "${!v-$v}"
+        echo "${!_varname-$_varname}"
     fi
 }
 
