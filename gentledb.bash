@@ -151,6 +151,31 @@ function gentledb {
     fi
 
 
+    ## GET FILENAME OF CONTENT OR POINTER
+
+    pycmd="if True:
+        i = sys.argv[3]
+        ic = db.findc(i)
+        ip = db.findp(i)
+        ii = ic + ip
+        if len(ii) != 1: raise gentledb.utilities.InvalidIdentifierException(i)
+        i = ii[0]
+        if ic:
+            print db._get_content_filename(i)
+        else:
+            print db._get_pointer_filename(i)
+        "
+
+    # gentledb db file pid_or_cid
+    if [[ $# -eq 3 && "$2" = "file" ]] ; then
+        local db_varname="$1"
+        local pid_or_cid="$(_gentledb_var_or_val "$3")"
+
+        _gentledb_py - "$pid_or_cid"
+        return 0
+    fi
+
+
     ## GET RANDOM ID
 
     pycmd="from gentledb.utilities import random; import sys; print random(sys.argv[1])"
