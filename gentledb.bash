@@ -15,17 +15,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with GentleDB.  If not, see <http://www.gnu.org/licenses/>.
 
-set -o errexit
-set -o noclobber
-set -o nounset
-set -o pipefail
-shopt -s nullglob
-
-
-if [[ "$0" = "-bash" || "$0" = "bash" ]] ; then  # running interactively
-    set +o errexit
-fi
-
 
 _gentledb_available_dbclasses=( $(python -c "import string, gentledb; print ' '.join(filter(lambda s: s.startswith(tuple(string.uppercase)), dir(gentledb)))") )
 
@@ -94,6 +83,15 @@ function _gentledb_var_or_val {
 }
 
 
+function _gentledb_set {
+    local varname="$1"
+    local command="$2"
+    local _value
+    _value="$(eval "$command")" || return 1
+    export $varname="$_value"
+}
+
+
 function gentledb {
     local do_debug=false
     if [[ $# -ge 1 && "$1" = "-d" ]] ; then
@@ -123,7 +121,7 @@ function gentledb {
         if $dbclass_found ; then
             _gentledb_test_subshell || return 1
             export $db_varname="$dbclass $db_options"
-            return 0
+            return
         fi
     fi
 
@@ -137,7 +135,7 @@ function gentledb {
         local db_varname="$1"
 
         _gentledb_py
-        return 0
+        return
     fi
 
     # gentledb directory = db getdir
@@ -146,8 +144,8 @@ function gentledb {
         local dir_varname="$1"
         local db_varname="$3"
 
-        export $dir_varname="$(_gentledb_py)"
-        return 0
+        _gentledb_set $dir_varname _gentledb_py
+        return
     fi
 
 
@@ -172,7 +170,7 @@ function gentledb {
         local pid_or_cid="$(_gentledb_var_or_val "$3")"
 
         _gentledb_py - "$pid_or_cid"
-        return 0
+        return
     fi
 
 
@@ -184,7 +182,7 @@ function gentledb {
     if [[ ( $# -eq 1 || $# -eq 2 ) && "$1" = "random" ]] ; then
         local prefix="${2-}"
         python -c "$pycmd" "$prefix"
-        return 0
+        return
     fi
 
     # gentledb pointer_id = random [prefix]
@@ -193,8 +191,8 @@ function gentledb {
         local pid_varname="$1"
         local prefix="${4-}"
 
-        export $pid_varname="$(python -c "$pycmd" "$prefix")"
-        return 0
+        _gentledb_set $pid_varname 'python -c "$pycmd" "$prefix"'
+        return
     fi
 
 
@@ -207,7 +205,7 @@ function gentledb {
         local db_varname="$1"
 
         _gentledb_py
-        return 0
+        return
     fi
 
     # gentledb content_id = db + < content-file
@@ -216,8 +214,8 @@ function gentledb {
         local cid_varname="$1"
         local db_varname="$3"
 
-        export $cid_varname="$(_gentledb_py)"
-        return 0
+        _gentledb_set $cid_varname _gentledb_py
+        return
     fi
 
     pycmd="print db + sys.argv[3]"
@@ -228,7 +226,7 @@ function gentledb {
         local ct="$3"
 
         _gentledb_py - "$ct"
-        return 0
+        return
     fi
 
     # gentledb content_id = db + "content"
@@ -238,8 +236,8 @@ function gentledb {
         local db_varname="$3"
         local ct="$5"
 
-        export $cid_varname="$(_gentledb_py - "$ct")"
-        return 0
+        _gentledb_set $cid_varname '_gentledb_py - "$ct"'
+        return
     fi
 
 
@@ -253,7 +251,7 @@ function gentledb {
         local content_id="$(_gentledb_var_or_val "$3")"
 
         _gentledb_py - "$content_id"
-        return 0
+        return
     fi
 
     # gentledb content = db - content_id
@@ -263,9 +261,9 @@ function gentledb {
         local db_varname="$3"
         local content_id="$(_gentledb_var_or_val "$5")"
 
-        export $ct_varname="$(_gentledb_py - "$content_id"; echo x)"
+        _gentledb_set $ct_varname '_gentledb_py - "$content_id"; echo x' || return 1
         eval "$ct_varname=\"\${$ct_varname%x}\""
-        return 0
+        return
     fi
 
 
@@ -277,7 +275,7 @@ function gentledb {
         local pointer_id="$(_gentledb_var_or_val "$2")"
 
         _gentledb_py "db[sys.argv[3]] = db + ''" "$pointer_id"
-        return 0
+        return
     fi
 
 
@@ -290,7 +288,7 @@ function gentledb {
         local content_id="$(_gentledb_var_or_val "$4")"
 
         _gentledb_py "db[sys.argv[3]] = sys.argv[4]" "$pointer_id" "$content_id"
-        return 0
+        return
     fi
 
 
@@ -304,7 +302,7 @@ function gentledb {
         local content_id="${3-}"
 
         _gentledb_py - "$content_id"
-        return 0
+        return
     fi
 
     # gentledb content_id_list = db findc [partial_content_id]
@@ -313,8 +311,8 @@ function gentledb {
         local db_varname="$3"
         local content_id="${5-}"
 
-        export $cid_varname="$(_gentledb_py - "$content_id")"
-        return 0
+        _gentledb_set $cid_varname '_gentledb_py - "$content_id"'
+        return
     fi
 
     pycmd="print '\n'.join(db.findp(sys.argv[3]))"
@@ -325,7 +323,7 @@ function gentledb {
         local pointer_id="${3-}"
 
         _gentledb_py - "$pointer_id"
-        return 0
+        return
     fi
 
     # gentledb pointer_id_list = db findp [partial_pointer_id]
@@ -334,8 +332,8 @@ function gentledb {
         local db_varname="$3"
         local pointer_id="${5-}"
 
-        export $pid_varname="$(_gentledb_py - "$pointer_id")"
-        return 0
+        _gentledb_set $pid_varname '_gentledb_py - "$pointer_id"'
+        return
     fi
 
 
@@ -350,8 +348,8 @@ function gentledb {
         local db_varname="$3"
         local pointer_id="$(_gentledb_var_or_val "$4")"
 
-        export $cid_varname="$(_gentledb_py - "$pointer_id")"
-        return 0
+        _gentledb_set $cid_varname '_gentledb_py - "$pointer_id"'
+        return
     fi
 
     # gentledb db pointer_id > content-id-file
@@ -360,7 +358,7 @@ function gentledb {
         local pointer_id="$(_gentledb_var_or_val "$2")"
 
         _gentledb_py - "$pointer_id"
-        return 0
+        return
     fi
 
 
@@ -371,7 +369,8 @@ function gentledb {
         local db_varname="$1"
         local pointer_id="$(_gentledb_var_or_val "$3")"
 
-        local fn="$(mktemp -t gentle_tp_da92_tmpfile_XXXXXXXX)"
+        local fn
+        fn="$(mktemp -t gentle_tp_da92_tmpfile_XXXXXXXX)" || return 1
         ( set +e ; (
             set -e  # cheap trap: inner block exits on failure, but outer block will be safe
 
@@ -382,10 +381,11 @@ function gentledb {
 
             pycmd="f = db(); shutil.copyfileobj(sys.stdin, f); db[sys.argv[3]] = f()"
             _gentledb_py - "$pointer_id" < "$fn"
-        ) ; true )
+        ) )
+        status=$?
         rm -f "$fn"
 
-        return 0
+        return $status
     fi
 
 
@@ -396,9 +396,8 @@ function gentledb {
         local db_varname="$1"
         local pointer_id="$(_gentledb_var_or_val "$3")"
 
-        pycmd="shutil.copyfileobj(db(db[sys.argv[3]]), sys.stdout)"
-        _gentledb_py - "$pointer_id"
-        return 0
+        _gentledb_py "shutil.copyfileobj(db(db[sys.argv[3]]), sys.stdout)" "$pointer_id"
+        return
     fi
 
 
@@ -417,8 +416,6 @@ function gentledb {
             json.pretty(json.dump, j, sys.stdout)
             sys.stdout.write('\n')"
 
-    pycmd="f = db(); shutil.copyfileobj(sys.stdin, f); db[sys.argv[3]] = f()"
-
     local pycmd_compact="if True:
         import json
         j = sys.stdin.read()
@@ -436,17 +433,19 @@ function gentledb {
         local db_varname="$1"
         local pointer_id="$(_gentledb_var_or_val "$3")"
 
-        local fn="$(mktemp -t gentle_tp_da92_tmpfile_XXXXXXXX)"
+        local fn
+        fn="$(mktemp -t gentle_tp_da92_tmpfile_XXXXXXXX)" || return 1
         ( set +e ; (
             set -e  # cheap trap: inner block exits on failure, but outer block will be safe
 
             _gentledb_py "$pycmd_pprint" "$pointer_id" >| "$fn"
             "${EDITOR-vi}" "$fn"
             _gentledb_py "$pycmd_compact" "$pointer_id" < "$fn"
-        ) ; true )
+        ) )
+        status=$?
         rm -f "$fn"
 
-        return 0
+        return $status
     fi
 
 
@@ -460,7 +459,7 @@ function gentledb {
         local pointer_id="$(_gentledb_var_or_val "$3")"
 
         _gentledb_py "$pycmd_pprint" "$pointer_id"
-        return 0
+        return
     fi
 
 
@@ -474,7 +473,7 @@ function gentledb {
         local pointer_id="$(_gentledb_var_or_val "$3")"
 
         _gentledb_py "$pycmd_compact" "$pointer_id"
-        return 0
+        return
     fi
 
 
