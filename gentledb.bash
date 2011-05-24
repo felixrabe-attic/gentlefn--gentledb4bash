@@ -267,6 +267,51 @@ function gentledb {
     fi
 
 
+    ## FINDC AND FINDP
+
+    pycmd="print '\n'.join(db.findc(sys.argv[3]))"
+
+    # gentledb db findc [partial_content_id]
+    if [[ ( $# -eq 2 || $# -eq 3 ) && "$2" = "findc" ]] ; then
+        local db_varname="$1"
+        local content_id="${3-}"
+
+        _gentledb_py - "$content_id"
+        return 0
+    fi
+
+    # gentledb content_id_list = db findc [partial_content_id]
+    if [[ ( $# -eq 4 || $# -eq 5 ) && "$2" = "=" && "$4" = "findc" ]] ; then
+        local cid_varname="$1"
+        local db_varname="$3"
+        local content_id="${5-}"
+
+        export $cid_varname="$(_gentledb_py - "$content_id")"
+        return 0
+    fi
+
+    pycmd="print '\n'.join(db.findp(sys.argv[3]))"
+
+    # gentledb db findp [partial_pointer_id]
+    if [[ ( $# -eq 2 || $# -eq 3 ) && "$2" = "findp" ]] ; then
+        local db_varname="$1"
+        local pointer_id="${3-}"
+
+        _gentledb_py - "$pointer_id"
+        return 0
+    fi
+
+    # gentledb pointer_id_list = db findp [partial_pointer_id]
+    if [[ ( $# -eq 4 || $# -eq 5 ) && "$2" = "=" && "$4" = "findp" ]] ; then
+        local pid_varname="$1"
+        local db_varname="$3"
+        local pointer_id="${5-}"
+
+        export $pid_varname="$(_gentledb_py - "$pointer_id")"
+        return 0
+    fi
+
+
     ## GET CONTENT ID FROM POINTER ID
 
     pycmd="print db[sys.argv[3]]"
@@ -288,51 +333,6 @@ function gentledb {
         local pointer_id="$(_gentledb_var_or_val "$2")"
 
         _gentledb_py - "$pointer_id"
-        return 0
-    fi
-
-
-    ## FINDC AND FINDP
-
-    pycmd="print '\n'.join(db.findc(sys.argv[3]))"
-
-    # gentledb db findc partial_content_id
-    if [[ $# -eq 3 && "$2" = "findc" ]] ; then
-        local db_varname="$1"
-        local content_id="$3"
-
-        _gentledb_py - "$content_id"
-        return 0
-    fi
-
-    # gentledb content_id_list = db findc partial_content_id
-    if [[ $# -eq 5 && "$2" = "=" && "$4" = "findc" ]] ; then
-        local cid_varname="$1"
-        local db_varname="$3"
-        local content_id="$5"
-
-        export $cid_varname="$(_gentledb_py - "$content_id")"
-        return 0
-    fi
-
-    pycmd="print '\n'.join(db.findp(sys.argv[3]))"
-
-    # gentledb db findp partial_pointer_id
-    if [[ $# -eq 3 && "$2" = "findp" ]] ; then
-        local db_varname="$1"
-        local pointer_id="$3"
-
-        _gentledb_py - "$pointer_id"
-        return 0
-    fi
-
-    # gentledb pointer_id_list = db findp partial_pointer_id
-    if [[ $# -eq 5 && "$2" = "=" && "$4" = "findp" ]] ; then
-        local pid_varname="$1"
-        local db_varname="$3"
-        local pointer_id="$5"
-
-        export $pid_varname="$(_gentledb_py - "$pointer_id")"
         return 0
     fi
 
