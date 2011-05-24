@@ -153,20 +153,22 @@ function gentledb {
 
     ## GET RANDOM ID
 
-    pycmd="from gentledb.utilities import random; print random()"
+    pycmd="from gentledb.utilities import random; import sys; print random(sys.argv[1])"
 
-    # gentledb random
-    if [[ $# -eq 1 && "$1" = "random" ]] ; then
-        python -c "$pycmd"
+    # gentledb random [prefix]
+    if [[ ( $# -eq 1 || $# -eq 2 ) && "$1" = "random" ]] ; then
+        local prefix="${2-}"
+        python -c "$pycmd" "$prefix"
         return 0
     fi
 
-    # gentledb pointer_id = random
-    if [[ $# -eq 3 && "$2" = "=" && "$3" = "random" ]] ; then
+    # gentledb pointer_id = random [prefix]
+    if [[ ( $# -eq 3 || $# -eq 4 ) && "$2" = "=" && "$3" = "random" ]] ; then
         _gentledb_test_subshell || return 1
         local pid_varname="$1"
+        local prefix="${4-}"
 
-        export $pid_varname="$(python -c "$pycmd")"
+        export $pid_varname="$(python -c "$pycmd" "$prefix")"
         return 0
     fi
 
