@@ -439,6 +439,20 @@ function gentledb {
     fi
 
 
+    ## PUTJSON
+
+    # Stores JSON compacted.
+
+    # gentledb db putjson pointer_id
+    if [[ $# -eq 3 && "$2" = "putjson" ]] ; then
+        local db_varname="$1"
+        local pointer_id="$(_gentledb_var_or_val "$3")"
+
+        _gentledb_py "$pycmd_compact" "$pointer_id"
+        return 0
+    fi
+
+
     echo NOT IMPLEMENTED > /dev/stderr
     return 1
 }
