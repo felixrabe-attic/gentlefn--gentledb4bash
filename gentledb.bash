@@ -323,7 +323,7 @@ function gentledb {
     # gentledb db findc [partial_content_id]
     if [[ ( $# -eq 2 || $# -eq 3 ) && $2 = findc ]] ; then
         local db_varname=$1
-        local content_id=${3-}
+        local content_id=$(_gentledb_var_or_val "${3-}")
 
         _gentledb_py - "$content_id"
         return
@@ -333,7 +333,7 @@ function gentledb {
     if [[ ( $# -eq 4 || $# -eq 5 ) && $2 = = && $4 = findc ]] ; then
         local cid_varname=$1
         local db_varname=$3
-        local content_id=${5-}
+        local content_id=$(_gentledb_var_or_val "${5-}")
 
         _gentledb_set $cid_varname '_gentledb_py - "$content_id"'
         return
@@ -344,7 +344,7 @@ function gentledb {
     # gentledb db findp [partial_pointer_id]
     if [[ ( $# -eq 2 || $# -eq 3 ) && $2 = findp ]] ; then
         local db_varname=$1
-        local pointer_id=${3-}
+        local pointer_id=$(_gentledb_var_or_val "${3-}")
 
         _gentledb_py - "$pointer_id"
         return
@@ -354,7 +354,7 @@ function gentledb {
     if [[ ( $# -eq 4 || $# -eq 5 ) && $2 = = && $4 = findp ]] ; then
         local pid_varname=$1
         local db_varname=$3
-        local pointer_id=${5-}
+        local pointer_id=$(_gentledb_var_or_val "${5-}")
 
         _gentledb_set $pid_varname '_gentledb_py - "$pointer_id"'
         return
