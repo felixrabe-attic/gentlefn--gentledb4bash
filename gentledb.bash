@@ -279,6 +279,30 @@ function gentledb {
     fi
 
 
+    ## CREATE A NEW POINTER ID TO EMPTY CONTENT
+
+    pycmd="newid = gentledb.utilities.random(sys.argv[3]); db[newid] = db + ''; print newid"
+
+    # gentledb db new [prefix]
+    if [[ ( $# -eq 2 || $# -eq 3 ) && $2 = new ]] ; then
+        local db_varname=$1
+        local prefix=${3-}
+
+        _gentledb_py - "$prefix"
+        return
+    fi
+
+    # gentledb db pid = new [prefix]
+    if [[ ( $# -eq 4 || $# -eq 5 ) && $3 = = && $4 = new ]] ; then
+        local db_varname=$1
+        local pid_varname=$2
+        local prefix=${5-}
+
+        _gentledb_set $pid_varname '_gentledb_py - "$prefix"'
+        return
+    fi
+
+
     ## SET POINTER ID TO CONTENT ID
 
     # gentledb db pointer_id = content_id
