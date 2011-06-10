@@ -52,8 +52,8 @@ function _gentledb_py {  # expects one argument or $pycmd, and $db_varname
     local db_class=${!db_varname%% *}
     local db_options=${!db_varname#* }
     pycmd=${_gentledb_py_header/\$pycmd/$pycmd}
-    $do_debug && args python -c "$$pycmd" "$db_class" "$db_options" "$@" > /dev/stderr
-    python -c "$pycmd" "$db_class" "$db_options" "$@"
+    $do_debug && args python -u -c "$pycmd" "$db_class" "$db_options" "$@" > /dev/stderr
+    python -u -c "$pycmd" "$db_class" "$db_options" "$@"
 }
 
 function args {
@@ -181,7 +181,7 @@ function gentledb {
     # gentledb random [prefix]
     if [[ ( $# -eq 1 || $# -eq 2 ) && $1 = random ]] ; then
         local prefix=${2-}
-        python -c "$pycmd" "$prefix"
+        python -u -c "$pycmd" "$prefix"
         return
     fi
 
@@ -191,7 +191,7 @@ function gentledb {
         local pid_varname=$1
         local prefix=${4-}
 
-        _gentledb_set $pid_varname 'python -c "$pycmd" "$prefix"'
+        _gentledb_set $pid_varname 'python -u -c "$pycmd" "$prefix"'
         return
     fi
 
